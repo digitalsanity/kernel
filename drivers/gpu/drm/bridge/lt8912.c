@@ -269,12 +269,29 @@ lt8912_connector_best_encoder(struct drm_connector *connector)
 
 static int lt8912_connector_get_modes(struct drm_connector *connector)
 {
-	int num_modes = 0;
+	struct lt8912 *lt8912 = connector_to_lt8912(connector);
+	struct drm_display_mode *mode;
+	int ret;
 
-	num_modes = drm_add_modes_noedid(connector, 1920, 1080);
-	drm_set_preferred_mode(connector, 1920, 1080);
+	/* TODO: EDID handing */
 
-	return num_modes;
+	mode = drm_mode_create(connector->dev);
+	if (!mode)
+		return -EINVAL;
+
+	ret = of_get_drm_display_mode(lt8912->dev->of_node, mode,
+				      OF_USE_NATIVE_MODE);
+	if (ret) {
+		dev_err(lt8912->dev, "failed to get display timings\n");
+		drm_mode_destroy(connector->dev, mode);
+		return 0;
+	}
+
+	mode->type |= DRM_MODE_TYPE_PREFERRED;
+	drm_mode_set_name(mode);
+	drm_mode_probed_add(connector, mode);
+
+	return 1;
 }
 
 static const struct drm_connector_helper_funcs lt8912_connector_helper_funcs = {
@@ -440,8 +457,7 @@ static int lt8912_probe(struct mipi_dsi_device *dsi)
 	dsi->lanes = 4;
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
-			  MIPI_DSI_MODE_VIDEO_HBP | MIPI_DSI_MODE_LPM |
-			  MIPI_DSI_MODE_EOT_PACKET;
+			  MIPI_DSI_MODE_LPM | MIPI_DSI_MODE_EOT_PACKET;
 
 	ret = mipi_dsi_attach(dsi);
 	if (ret) {

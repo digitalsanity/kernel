@@ -510,9 +510,15 @@ dw_hdmi_rockchip_mode_valid(struct drm_connector *connector,
 		return MODE_BAD;
 
 	hdmi = to_rockchip_hdmi(encoder);
-	if (hdmi->dev_type == RK3368_HDMI && mode->clock > 340000 &&
+	if ((hdmi->dev_type == RK3368_HDMI || hdmi->dev_type == RK3328_HDMI) &&
+	    mode->clock > 340000 &&
 	    !drm_mode_is_420(&connector->display_info, mode))
 		return MODE_BAD;
+
+	/* Skip bad clocks for RK3288 */
+	if (hdmi->dev_type == RK3288_HDMI && (mode->clock < 27500 || mode->clock > 340000))
+		return MODE_CLOCK_RANGE;
+
 	/*
 	 * ensure all drm display mode can work, if someone want support more
 	 * resolutions, please limit the possible_crtc, only connect to
@@ -722,7 +728,9 @@ dw_hdmi_rockchip_select_output(struct drm_connector_state *conn_state,
 		/* BT2020 require color depth at lest 10bit */
 		*color_depth = 10;
 		/* We prefer use YCbCr422 to send 10bit */
-		if (info->color_formats & DRM_COLOR_FORMAT_YCRCB422)
+		if (info->color_formats & DRM_COLOR_FORMAT_YCRCB422 &&
+		    info->max_tmds_clock <= 340000 &&
+		    hdmi->dev_type != RK3288_HDMI)
 			*color_format = DRM_HDMI_OUTPUT_YCBCR422;
 	}
 
@@ -1154,6 +1162,7 @@ static const struct dw_hdmi_plat_data rk3328_hdmi_drv_data = {
 	.phy_ops    = &inno_dw_hdmi_phy_ops,
 	.phy_name   = "inno_dw_hdmi_phy2",
 	.dev_type   = RK3328_HDMI,
+	.phy_force_vendor = true,
 };
 
 static const struct dw_hdmi_plat_data rk3366_hdmi_drv_data = {
@@ -1316,12 +1325,6 @@ static int dw_hdmi_rockchip_probe(struct platform_device *pdev)
 	return component_add(&pdev->dev, &dw_hdmi_rockchip_ops);
 }
 
-static void dw_hdmi_rockchip_shutdown(struct platform_device *pdev)
-{
-	dw_hdmi_suspend(&pdev->dev);
-	pm_runtime_put_sync(&pdev->dev);
-}
-
 static int dw_hdmi_rockchip_remove(struct platform_device *pdev)
 {
 	component_del(&pdev->dev, &dw_hdmi_rockchip_ops);
@@ -1354,7 +1357,6 @@ static const struct dev_pm_ops dw_hdmi_pm_ops = {
 static struct platform_driver dw_hdmi_rockchip_pltfm_driver = {
 	.probe  = dw_hdmi_rockchip_probe,
 	.remove = dw_hdmi_rockchip_remove,
-	.shutdown = dw_hdmi_rockchip_shutdown,
 	.driver = {
 		.name = "dwhdmi-rockchip",
 		.of_match_table = dw_hdmi_rockchip_dt_ids,

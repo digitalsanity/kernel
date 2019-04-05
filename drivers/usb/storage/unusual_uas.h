@@ -57,12 +57,6 @@ UNUSUAL_DEV(0x0bc2, 0x2312, 0x0000, 0x9999,
 		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
 		US_FL_NO_ATA_1X),
 
-UNUSUAL_DEV(0x0bc2, 0x2321, 0x0000, 0x9999,
-		"Seagate",
-		"Expansion HDD",
-		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
-		US_FL_IGNORE_UAS),
-
 /* https://bbs.archlinux.org/viewtopic.php?id=183190 */
 UNUSUAL_DEV(0x0bc2, 0x3312, 0x0000, 0x9999,
 		"Seagate",
@@ -200,3 +194,10 @@ UNUSUAL_DEV(0x4971, 0x8017, 0x0000, 0x9999,
 		"External HDD",
 		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
 		US_FL_NO_REPORT_OPCODES),
+
+/* Reported-by: Thomas Kaiser and Kamil Trzciński <ayufan@ayufan.eu> */
+UNUSUAL_DEV(0x2537, 0x1066, 0x0000, 0x9999,
+		"Norelsys",
+		"NS1066X",
+		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
+		US_FL_IGNORE_UAS),

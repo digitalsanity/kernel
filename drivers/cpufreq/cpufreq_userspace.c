@@ -91,8 +91,7 @@ static int cpufreq_governor_userspace(struct cpufreq_policy *policy,
 
 		mutex_lock(&userspace_mutex);
 		per_cpu(cpu_is_managed, cpu) = 1;
-		if (!*setspeed)
-			*setspeed = policy->cur;
+		*setspeed = policy->cur;
 		mutex_unlock(&userspace_mutex);
 		break;
 	case CPUFREQ_GOV_STOP:
@@ -100,6 +99,7 @@ static int cpufreq_governor_userspace(struct cpufreq_policy *policy,
 
 		mutex_lock(&userspace_mutex);
 		per_cpu(cpu_is_managed, cpu) = 0;
+		*setspeed = 0;
 		mutex_unlock(&userspace_mutex);
 		break;
 	case CPUFREQ_GOV_LIMITS:

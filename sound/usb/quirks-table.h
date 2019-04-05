@@ -3321,7 +3321,19 @@ AU0828_DEVICE(0x2040, 0x7270, "Hauppauge", "HVR-950Q"),
 					}
 				}
 			},
+			{
+				.ifnum = -1
+			},
 		}
+	}
+},
+
+{
+	USB_DEVICE(0x0bda, 0x481a),
+	.driver_info = (unsigned long) &(const struct snd_usb_audio_quirk) {
+		.vendor_name = "Realtek",
+		.product_name = "ALC4040",
+		.ifnum = QUIRK_NO_INTERFACE
 	}
 },
 

@@ -35,7 +35,7 @@ struct vcodec_iommu_session_info *vcodec_iommu_get_session_info
 
 int vcodec_iommu_create(struct vcodec_iommu_info *iommu_info)
 {
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->create)
+	if (!iommu_info || !iommu_info->ops->create)
 		return -EINVAL;
 
 	return iommu_info->ops->create(iommu_info);
@@ -47,17 +47,15 @@ int vcodec_iommu_alloc(struct vcodec_iommu_info *iommu_info,
 		       unsigned long align)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -ENOMEM;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->alloc || !session)
+	if (!iommu_info || !iommu_info->ops->alloc || !session)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
+
 	session_info = vcodec_iommu_get_session_info(iommu_info, session);
 	if (!session_info) {
 		session_info = kzalloc(sizeof(*session_info), GFP_KERNEL);
 		if (!session_info)
-			goto ERROR;
+			return -ENOMEM;
 
 		INIT_LIST_HEAD(&session_info->head);
 		INIT_LIST_HEAD(&session_info->buffer_list);
@@ -68,31 +66,29 @@ int vcodec_iommu_alloc(struct vcodec_iommu_info *iommu_info,
 		session_info->dev = iommu_info->dev;
 		session_info->iommu_info = iommu_info;
 		session_info->buffer_nums = 0;
+		mutex_lock(&iommu_info->list_mutex);
 		list_add_tail(&session_info->head, &iommu_info->session_list);
+		mutex_unlock(&iommu_info->list_mutex);
 	}
 
 	session_info->debug_level = iommu_info->debug_level;
-	result = iommu_info->ops->alloc(session_info, size, align);
-ERROR:
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->alloc(session_info, size, align);
 }
 
 int vcodec_iommu_import(struct vcodec_iommu_info *iommu_info,
 			struct vpu_session *session, int fd)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -ENOMEM;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->import || !session)
+	if (!iommu_info || !iommu_info->ops->import || !session)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
+
 	session_info = vcodec_iommu_get_session_info(iommu_info, session);
 	if (!session_info) {
 		session_info = kzalloc(sizeof(*session_info), GFP_KERNEL);
 		if (!session_info)
-			goto ERROR;
+			return -ENOMEM;
 
 		INIT_LIST_HEAD(&session_info->head);
 		INIT_LIST_HEAD(&session_info->buffer_list);
@@ -103,48 +99,40 @@ int vcodec_iommu_import(struct vcodec_iommu_info *iommu_info,
 		session_info->dev = iommu_info->dev;
 		session_info->iommu_info = iommu_info;
 		session_info->buffer_nums = 0;
+		mutex_lock(&iommu_info->list_mutex);
 		list_add_tail(&session_info->head, &iommu_info->session_list);
+		mutex_unlock(&iommu_info->list_mutex);
 	}
 
 	session_info->debug_level = iommu_info->debug_level;
-	result = iommu_info->ops->import(session_info, fd);
-ERROR:
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->import(session_info, fd);
 }
 
 int vcodec_iommu_free(struct vcodec_iommu_info *iommu_info,
 		      struct vpu_session *session, int idx)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->free)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->free || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-			session);
-	if (session_info)
-		result = iommu_info->ops->free(session_info, idx);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->free(session_info, idx);
 }
 
 int vcodec_iommu_free_fd(struct vcodec_iommu_info *iommu_info,
 			 struct vpu_session *session, int fd)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->free_fd)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->free_fd || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-				session);
-	if (session_info)
-		result = iommu_info->ops->free_fd(session_info, fd);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->free_fd(session_info, fd);
 }
 
 int vcodec_iommu_map_iommu_with_iova(struct vcodec_iommu_info *iommu_info,
@@ -153,38 +141,27 @@ int vcodec_iommu_map_iommu_with_iova(struct vcodec_iommu_info *iommu_info,
 				     unsigned long size)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->map_iommu_with_iova)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->map_iommu || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-				session);
-	if (session_info)
-		result = iommu_info->ops->map_iommu_with_iova
-				(session_info, idx, iova, size);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->map_iommu_with_iova(session_info,
+						    idx, iova, size);
 }
 
 int vcodec_iommu_unmap_iommu_with_iova(struct vcodec_iommu_info *iommu_info,
 				       void *session, int idx)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->unmap_iommu_with_iova)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->unmap_iommu || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-				session);
-	if (session_info)
-		result = iommu_info->ops->unmap_iommu_with_iova
-				(session_info, idx);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->unmap_iommu_with_iova(session_info, idx);
 }
 
 int vcodec_iommu_map_iommu(struct vcodec_iommu_info *iommu_info,
@@ -193,43 +170,33 @@ int vcodec_iommu_map_iommu(struct vcodec_iommu_info *iommu_info,
 			   unsigned long *size)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->map_iommu)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->map_iommu || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-			session);
-	if (session_info)
-		result = iommu_info->ops->map_iommu(session_info,
-				idx, iova, size);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->map_iommu(session_info, idx, iova, size);
 }
 
 int vcodec_iommu_unmap_iommu(struct vcodec_iommu_info *iommu_info,
 			     struct vpu_session *session, int idx)
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
-	int result = -EINVAL;
 
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->unmap_iommu)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->unmap_iommu || !session_info)
 		return -EINVAL;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-				session);
-	if (session_info)
-		result = iommu_info->ops->unmap_iommu
-				(session_info, idx);
-	mutex_unlock(&iommu_info->list_mutex);
-	return result;
+
+	return iommu_info->ops->unmap_iommu(session_info, idx);
 }
 
 static int vcodec_iommu_destroy(struct vcodec_iommu_info *iommu_info)
 {
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->destroy)
+	if (!iommu_info || !iommu_info->ops->destroy)
 		return -EINVAL;
+
 	return iommu_info->ops->destroy(iommu_info);
 }
 
@@ -238,15 +205,12 @@ void vcodec_iommu_dump(struct vcodec_iommu_info *iommu_info,
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->dump)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->dump || !session_info)
 		return;
-	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info
-				(iommu_info, session);
-	if (session_info)
-		iommu_info->ops->dump(session_info);
-	mutex_unlock(&iommu_info->list_mutex);
+
+	iommu_info->ops->dump(session_info);
 }
 
 void vcodec_iommu_clear(struct vcodec_iommu_info *iommu_info,
@@ -254,23 +218,22 @@ void vcodec_iommu_clear(struct vcodec_iommu_info *iommu_info,
 {
 	struct vcodec_iommu_session_info *session_info = NULL;
 
-	if (!iommu_info || !iommu_info->ops ||
-		!iommu_info->ops->clear)
+	session_info = vcodec_iommu_get_session_info(iommu_info, session);
+
+	if (!iommu_info || !iommu_info->ops->clear || !session_info)
 		return;
+
+	iommu_info->ops->clear(session_info);
+
 	mutex_lock(&iommu_info->list_mutex);
-	session_info = vcodec_iommu_get_session_info(iommu_info,
-				session);
-	if (session_info) {
-		iommu_info->ops->clear(session_info);
-		list_del_init(&session_info->head);
-		kfree(session_info);
-	}
+	list_del_init(&session_info->head);
+	kfree(session_info);
 	mutex_unlock(&iommu_info->list_mutex);
 }
 
 int vcodec_iommu_attach(struct vcodec_iommu_info *iommu_info)
 {
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->attach)
+	if (!iommu_info || !iommu_info->ops->attach)
 		return 0;
 
 	return iommu_info->ops->attach(iommu_info);
@@ -278,7 +241,7 @@ int vcodec_iommu_attach(struct vcodec_iommu_info *iommu_info)
 
 void vcodec_iommu_detach(struct vcodec_iommu_info *iommu_info)
 {
-	if (!iommu_info || !iommu_info->ops || !iommu_info->ops->detach)
+	if (!iommu_info || !iommu_info->ops->detach)
 		return;
 
 	return iommu_info->ops->detach(iommu_info);

@@ -617,11 +617,11 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		/* These usage IDs map directly to the usage codes. */
 		case HID_GD_X: case HID_GD_Y: case HID_GD_Z:
 		case HID_GD_RX: case HID_GD_RY: case HID_GD_RZ:
-			if (field->flags & HID_MAIN_ITEM_RELATIVE)
-				map_rel(usage->hid & 0xf);
-			else
-				map_abs_clear(usage->hid & 0xf);
-			break;
+//			if (field->flags & HID_MAIN_ITEM_RELATIVE)
+//				map_rel(usage->hid & 0xf);
+//			else
+//				map_abs_clear(usage->hid & 0xf);
+//			break;
 
 		case HID_GD_SLIDER: case HID_GD_DIAL: case HID_GD_WHEEL:
 			if (field->flags & HID_MAIN_ITEM_RELATIVE)
@@ -1142,8 +1142,10 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 		if (field->flags & HID_MAIN_ITEM_NULL_STATE &&
 		    (value < field->logical_minimum ||
 		     value > field->logical_maximum)) {
-			dbg_hid("Ignoring out-of-range value %x\n", value);
-			return;
+	             if(value < field->logical_minimum)
+	                 value = field->logical_minimum;
+	             else
+	                 value = field->logical_maximum;
 		}
 		value = clamp(value,
 			      field->logical_minimum,

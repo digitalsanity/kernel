@@ -439,14 +439,6 @@
 	status = "okay";
 };
 
-&route_edp {
-	status = "okay";
-};
-
-&route_hdmi {
-	status = "okay";
-};
-
 &sound {
 	status = "okay";
 };

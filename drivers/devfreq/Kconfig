@@ -1,7 +1,6 @@
 menuconfig PM_DEVFREQ
 	bool "Generic Dynamic Voltage and Frequency Scaling (DVFS) support"
 	select SRCU
-	select PM_OPP
 	help
 	  A device may have a list of frequencies and voltages available.
 	  devfreq, a generic DVFS framework can be registered for a device
@@ -39,6 +38,26 @@ config DEVFREQ_GOV_SIMPLE_ONDEMAND
 	  Simple-Ondemand should be able to provide busy/total counter
 	  values that imply the usage rate. A device may provide tuned
 	  values to the governor with data field at devfreq_add_device().
+
+config DEVFREQ_GOV_MRFIXEDFREQ5
+	tristate "mrfixedfreq5"
+	help
+	  Locks the frequency at 500mhz.
+
+config DEVFREQ_GOV_MRFIXEDFREQ6
+	tristate "mrfixedfreq6"
+	help
+	  Locks the frequency at 600mhz.
+
+config DEVFREQ_GOV_MRFIXEDFREQ7
+	tristate "mrfixedfreq7"
+	help
+	  Locks the frequency at 700mhz.
+
+config DEVFREQ_GOV_MRFIXEDFREQ8
+	tristate "mrfixedfreq8"
+	help
+	  Locks the frequency at 800mhz.
 
 config DEVFREQ_GOV_PERFORMANCE
 	tristate "Performance"

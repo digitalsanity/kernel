@@ -32,6 +32,7 @@
 #include <linux/i2c.h>
 #include <linux/spi/spi.h>
 #include <linux/iio/consumer.h>
+#include <linux/adc.h>
 #include <linux/wakelock.h>
 #include <linux/gpio.h>
 

@@ -48,7 +48,6 @@
 #include <dt-bindings/soc/rockchip,boot-mode.h>
 #include <dt-bindings/suspend/rockchip-rk3288.h>
 #include <dt-bindings/display/drm_mipi_dsi.h>
-#include <dt-bindings/display/media-bus-format.h>
 #include "skeleton64.dtsi"
 
 / {
@@ -353,49 +352,57 @@
 
 	sdmmc: dwmmc@ff0c0000 {
 		compatible = "rockchip,rk3288-dw-mshc";
-		clock-freq-min-max = <400000 150000000>;
+		max-frequency = <150000000>;
 		clocks = <&cru HCLK_SDMMC>, <&cru SCLK_SDMMC>,
 			 <&cru SCLK_SDMMC_DRV>, <&cru SCLK_SDMMC_SAMPLE>;
 		clock-names = "biu", "ciu", "ciu-drive", "ciu-sample";
 		fifo-depth = <0x100>;
 		interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0xff0c0000 0x0 0x4000>;
+		resets = <&cru SRST_MMC0>;
+		reset-names = "reset";
 		status = "disabled";
 	};
 
 	sdio0: dwmmc@ff0d0000 {
 		compatible = "rockchip,rk3288-dw-mshc";
-		clock-freq-min-max = <400000 150000000>;
+		max-frequency = <150000000>;
 		clocks = <&cru HCLK_SDIO0>, <&cru SCLK_SDIO0>,
 			 <&cru SCLK_SDIO0_DRV>, <&cru SCLK_SDIO0_SAMPLE>;
 		clock-names = "biu", "ciu", "ciu-drive", "ciu-sample";
 		fifo-depth = <0x100>;
 		interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0xff0d0000 0x0 0x4000>;
+		resets = <&cru SRST_SDIO0>;
+		reset-names = "reset";
 		status = "disabled";
 	};
 
 	sdio1: dwmmc@ff0e0000 {
 		compatible = "rockchip,rk3288-dw-mshc";
-		clock-freq-min-max = <400000 150000000>;
+		max-frequency = <150000000>;
 		clocks = <&cru HCLK_SDIO1>, <&cru SCLK_SDIO1>,
 			 <&cru SCLK_SDIO1_DRV>, <&cru SCLK_SDIO1_SAMPLE>;
 		clock-names = "biu", "ciu", "ciu-drive", "ciu-sample";
 		fifo-depth = <0x100>;
 		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0xff0e0000 0x0 0x4000>;
+		resets = <&cru SRST_SDIO1>;
+		reset-names = "reset";
 		status = "disabled";
 	};
 
 	emmc: dwmmc@ff0f0000 {
 		compatible = "rockchip,rk3288-dw-mshc";
-		clock-freq-min-max = <400000 150000000>;
+		max-frequency = <150000000>;
 		clocks = <&cru HCLK_EMMC>, <&cru SCLK_EMMC>,
 			 <&cru SCLK_EMMC_DRV>, <&cru SCLK_EMMC_SAMPLE>;
 		clock-names = "biu", "ciu", "ciu-drive", "ciu-sample";
 		fifo-depth = <0x100>;
 		interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0xff0f0000 0x0 0x4000>;
+		resets = <&cru SRST_EMMC>;
+		reset-names = "reset";
 		status = "disabled";
 		supports-emmc;
 	};
@@ -639,15 +646,17 @@
 		compatible = "rockchip,rk3288-tsadc";
 		reg = <0x0 0xff280000 0x0 0x100>;
 		interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+		rockchip,grf = <&grf>;
 		clocks = <&cru SCLK_TSADC>, <&cru PCLK_TSADC>;
 		clock-names = "tsadc", "apb_pclk";
 		assigned-clocks = <&cru SCLK_TSADC>;
 		assigned-clock-rates = <5000>;
 		resets = <&cru SRST_TSADC>;
 		reset-names = "tsadc-apb";
-		pinctrl-names = "gpio", "otpout";
+		pinctrl-names = "init", "default", "sleep";
 		pinctrl-0 = <&otp_gpio>;
-		pinctrl-1 = <&otp_gpio>;
+		pinctrl-1 = <&otp_out>;
+		pinctrl-2 = <&otp_gpio>;
 		#thermal-sensor-cells = <1>;
 		rockchip,hw-tshut-temp = <120000>;
 		rockchip,hw-tshut-mode = <0>; /* tshut mode 0:CRU 1:GPIO */
@@ -973,6 +982,7 @@
 					 <&cru SCLK_EDP_24M>,
 					 <&cru SCLK_EDP>,
 					 <&cru SCLK_HDMI_CEC>,
+					 <&cru SCLK_HDMI_HDCP>,
 					 <&cru SCLK_ISP_JPE>,
 					 <&cru SCLK_ISP>,
 					 <&cru SCLK_RGA>;
@@ -1070,34 +1080,6 @@
 			status = "disabled";
 		};
 
-		lvds: lvds {
-			compatible = "rockchip,rk3288-lvds";
-			phys = <&video_phy>;
-			phy-names = "phy";
-			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					reg = <0>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					lvds_in_vopb: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&vopb_out_lvds>;
-					};
-
-					lvds_in_vopl: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&vopl_out_lvds>;
-					};
-				};
-			};
-		};
-
 		mipi_phy_rx0: mipi-phy-rx0 {
 			compatible = "rockchip,rk3288-mipi-dphy";
 			clocks = <&cru SCLK_MIPIDSI_24M>, <&cru PCLK_MIPI_CSI>;
@@ -1108,37 +1090,6 @@
 		io_domains: io-domains {
 			compatible = "rockchip,rk3288-io-voltage-domain";
 			status = "disabled";
-		};
-
-		rgb: rgb {
-			compatible = "rockchip,rk3288-rgb";
-			pinctrl-names = "default", "sleep";
-			pinctrl-0 = <&lcdc_rgb_pins>;
-			pinctrl-1 = <&lcdc_sleep_pins>;
-			phys = <&video_phy>;
-			phy-names = "phy";
-			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					reg = <0>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					rgb_in_vopb: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&vopb_out_rgb>;
-					};
-
-					rgb_in_vopl: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&vopl_out_rgb>;
-					};
-				};
-			};
 		};
 
 		usbphy: usbphy {
@@ -1235,8 +1186,6 @@
 		assigned-clock-parents = <&cru PLL_GPLL>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s0_bus>;
-		resets = <&cru SRST_I2S0>;
-		reset-names = "reset-m";
 		rockchip,playback-channels = <8>;
 		rockchip,capture-channels = <2>;
 		status = "disabled";
@@ -1365,6 +1314,8 @@
 		resets = <&cru SRST_LCDC0_AXI>, <&cru SRST_LCDC0_AHB>, <&cru SRST_LCDC0_DCLK>;
 		reset-names = "axi", "ahb", "dclk";
 		iommus = <&vopb_mmu>;
+		assigned-clocks = <&cru DCLK_VOP0>;
+		assigned-clock-parents = <&cru PLL_NPLL>;
 		status = "disabled";
 
 		vopb_out: port {
@@ -1394,11 +1345,6 @@
 			vopb_out_dsi1: endpoint@4 {
 				reg = <4>;
 				remote-endpoint = <&dsi1_in_vopb>;
-			};
-
-			vopb_out_rgb: endpoint@5 {
-				reg = <5>;
-				remote-endpoint = <&rgb_in_vopb>;
 			};
 		};
 	};
@@ -1456,11 +1402,6 @@
 			vopl_out_dsi1: endpoint@4 {
 				reg = <4>;
 				remote-endpoint = <&dsi1_in_vopl>;
-			};
-
-			vopl_out_rgb: endpoint@5 {
-				reg = <5>;
-				remote-endpoint = <&rgb_in_vopl>;
 			};
 		};
 	};
@@ -1605,16 +1546,35 @@
 		};
 	};
 
-	video_phy: video-phy@ff96c000 {
-		compatible = "rockchip,rk3288-video-phy";
+	lvds: lvds@ff96c000 {
+		compatible = "rockchip,rk3288-lvds";
 		reg = <0x0 0xff96c000 0x0 0x4000>;
 		clocks = <&cru PCLK_LVDS_PHY>;
-		clock-names = "pclk";
-		resets = <&cru SRST_LVDS_PHY>;
-		reset-names = "rst";
+		clock-names = "pclk_lvds";
 		power-domains = <&power RK3288_PD_VIO>;
-		#phy-cells = <0>;
+		rockchip,grf = <&grf>;
 		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			lvds_in: port@0 {
+				reg = <0>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				lvds_in_vopb: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vopb_out_lvds>;
+				};
+				lvds_in_vopl: endpoint@1 {
+					reg = <1>;
+					remote-endpoint = <&vopl_out_lvds>;
+				};
+			};
+		};
 	};
 
 	hdmi: hdmi@ff980000 {
@@ -1626,7 +1586,7 @@
 		clocks = <&cru  PCLK_HDMI_CTRL>, <&cru SCLK_HDMI_HDCP>, <&cru SCLK_HDMI_CEC>;
 		clock-names = "iahb", "isfr", "cec";
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&hdmi_ddc>;
+		pinctrl-0 = <&hdmi_ddc>, <&hdmi_cec_c0>;
 		pinctrl-1 = <&hdmi_gpio>;
 		power-domains = <&power RK3288_PD_VIO>;
 		status = "disabled";
@@ -1752,6 +1712,7 @@
 		operating-points-v2 = <&gpu_opp_table>;
 		#cooling-cells = <2>; /* min followed by max */
 		power-domains = <&power RK3288_PD_GPU>;
+		power-off-delay-ms = <200>;
 		status = "disabled";
 
 		upthreshold = <75>;
@@ -2009,8 +1970,12 @@
 						 &pcfg_pull_none>;
 			};
 
-			hdmi_cec: hdmi-cec {
+			hdmi_cec_c0: hdmi-cec-c0 {
 				rockchip,pins = <7 16 RK_FUNC_2 &pcfg_pull_none>;
+			};
+
+			hdmi_cec_c7: hdmi-cec-c7 {
+				rockchip,pins = <7 23 RK_FUNC_4 &pcfg_pull_none>;
 			};
 
 			hdmi_ddc: hdmi-ddc {
@@ -2117,18 +2082,11 @@
 		};
 
 		lcdc {
-			lcdc_rgb_pins: lcdc-rgb-pins {
-				rockchip,pins = <1 27 RK_FUNC_1 &pcfg_pull_none>, /* LCDC_DCLK */
-						<1 26 RK_FUNC_1 &pcfg_pull_none>, /* LCDC_DEN */
-						<1 25 RK_FUNC_1 &pcfg_pull_none>, /* LCDC_VSYNC */
-						<1 24 RK_FUNC_1 &pcfg_pull_none>; /* LCDC_HSYNC */
-			};
-
-			lcdc_sleep_pins: lcdc-sleep-pins {
-				rockchip,pins =	<1 27 RK_FUNC_GPIO &pcfg_pull_none>, /* LCDC_DCLK */
-						<1 26 RK_FUNC_GPIO &pcfg_pull_none>, /* LCDC_DEN */
-						<1 25 RK_FUNC_GPIO &pcfg_pull_none>, /* LCDC_VSYNC */
-						<1 24 RK_FUNC_GPIO &pcfg_pull_none>; /* LCDC_HSYNC */
+			lcdc_ctl: lcdc-ctl {
+				rockchip,pins = <1 24 RK_FUNC_1 &pcfg_pull_none>,
+						<1 25 RK_FUNC_1 &pcfg_pull_none>,
+						<1 26 RK_FUNC_1 &pcfg_pull_none>,
+						<1 27 RK_FUNC_1 &pcfg_pull_none>;
 			};
 		};
 

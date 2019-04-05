@@ -18,7 +18,6 @@
 #include <linux/clk.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/reset.h>
 #include <linux/spinlock.h>
 #include <sound/pcm_params.h>
 #include <sound/dmaengine_pcm.h>
@@ -43,8 +42,6 @@ struct rk_i2s_dev {
 
 	struct regmap *regmap;
 	struct regmap *grf;
-	struct reset_control *reset_m;
-	struct reset_control *reset_h;
 
 /*
  * Used to indicate the tx/rx status.
@@ -98,21 +95,6 @@ static inline struct rk_i2s_dev *to_info(struct snd_soc_dai *dai)
 	return snd_soc_dai_get_drvdata(dai);
 }
 
-static void rockchip_i2s_reset(struct rk_i2s_dev *i2s)
-{
-	if (!IS_ERR(i2s->reset_m))
-		reset_control_assert(i2s->reset_m);
-	if (!IS_ERR(i2s->reset_h))
-		reset_control_assert(i2s->reset_h);
-	udelay(1);
-	if (!IS_ERR(i2s->reset_m))
-		reset_control_deassert(i2s->reset_m);
-	if (!IS_ERR(i2s->reset_h))
-		reset_control_deassert(i2s->reset_h);
-	regcache_mark_dirty(i2s->regmap);
-	regcache_sync(i2s->regmap);
-}
-
 static void rockchip_snd_txctrl(struct rk_i2s_dev *i2s, int on)
 {
 	unsigned int val = 0;
@@ -153,8 +135,7 @@ static void rockchip_snd_txctrl(struct rk_i2s_dev *i2s, int on)
 				regmap_read(i2s->regmap, I2S_CLR, &val);
 				retry--;
 				if (!retry) {
-					dev_warn(i2s->dev, "reset\n");
-					rockchip_i2s_reset(i2s);
+					dev_warn(i2s->dev, "fail to clear\n");
 					break;
 				}
 			}
@@ -203,8 +184,7 @@ static void rockchip_snd_rxctrl(struct rk_i2s_dev *i2s, int on)
 				regmap_read(i2s->regmap, I2S_CLR, &val);
 				retry--;
 				if (!retry) {
-					dev_warn(i2s->dev, "reset\n");
-					rockchip_i2s_reset(i2s);
+					dev_warn(i2s->dev, "fail to clear\n");
 					break;
 				}
 			}
@@ -597,13 +577,11 @@ static const struct rk_i2s_pins rk3399_i2s_pins = {
 
 static const struct of_device_id rockchip_i2s_match[] = {
 	{ .compatible = "rockchip,px30-i2s", },
-	{ .compatible = "rockchip,rk1808-i2s", },
 	{ .compatible = "rockchip,rk3036-i2s", },
 	{ .compatible = "rockchip,rk3066-i2s", },
 	{ .compatible = "rockchip,rk3128-i2s", },
 	{ .compatible = "rockchip,rk3188-i2s", },
 	{ .compatible = "rockchip,rk3288-i2s", },
-	{ .compatible = "rockchip,rk3308-i2s", },
 	{ .compatible = "rockchip,rk3328-i2s", },
 	{ .compatible = "rockchip,rk3368-i2s", },
 	{ .compatible = "rockchip,rk3399-i2s", .data = &rk3399_i2s_pins },
@@ -622,10 +600,8 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 	int val;
 
 	i2s = devm_kzalloc(&pdev->dev, sizeof(*i2s), GFP_KERNEL);
-	if (!i2s) {
-		dev_err(&pdev->dev, "Can't allocate rk_i2s_dev\n");
+	if (!i2s)
 		return -ENOMEM;
-	}
 
 	i2s->dev = &pdev->dev;
 
@@ -637,9 +613,6 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 
 		i2s->pins = of_id->data;
 	}
-
-	i2s->reset_m = devm_reset_control_get(&pdev->dev, "reset-m");
-	i2s->reset_h = devm_reset_control_get(&pdev->dev, "reset-h");
 
 	/* try to prepare related clocks */
 	i2s->hclk = devm_clk_get(&pdev->dev, "i2s_hclk");
@@ -689,12 +662,13 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
-	soc_dai = devm_kzalloc(&pdev->dev,
+	soc_dai = devm_kmemdup(&pdev->dev, &rockchip_i2s_dai,
 			       sizeof(*soc_dai), GFP_KERNEL);
-	if (!soc_dai)
-		return -ENOMEM;
+	if (!soc_dai) {
+		ret = -ENOMEM;
+		goto err_pm_disable;
+	}
 
-	memcpy(soc_dai, &rockchip_i2s_dai, sizeof(*soc_dai));
 	if (!of_property_read_u32(node, "rockchip,playback-channels", &val)) {
 		if (val >= 2 && val <= 8)
 			soc_dai->playback.channels_max = val;
@@ -759,7 +733,6 @@ static int rockchip_i2s_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		i2s_runtime_suspend(&pdev->dev);
 
-	clk_disable_unprepare(i2s->mclk);
 	clk_disable_unprepare(i2s->hclk);
 
 	return 0;

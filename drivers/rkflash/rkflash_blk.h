@@ -25,7 +25,6 @@ enum flash_type {
 
 struct flash_boot_ops {
 	int id;
-
 	int (*init)(void __iomem *reg_addr);
 	int (*read)(u32 sec, u32 n_sec, void *p_data);
 	int (*write)(u32 sec, u32 n_sec, void *p_data);
@@ -34,8 +33,6 @@ struct flash_boot_ops {
 	int (*resume)(void __iomem *reg_addr);
 	int (*vendor_read)(u32 sec, u32 n_sec, void *p_data);
 	int (*vendor_write)(u32 sec, u32 n_sec, void *p_data);
-	int (*gc)(void);
-	int (*discard)(u32 sec, u32 n_sec);
 };
 
 struct flash_part {

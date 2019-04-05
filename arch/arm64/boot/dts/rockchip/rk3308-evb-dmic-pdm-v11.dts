@@ -41,10 +41,6 @@
 	};
 };
 
-&rk_timer_rtc {
-	status = "okay";
-};
-
 &acodec_sound {
 	status = "disabled";
 };

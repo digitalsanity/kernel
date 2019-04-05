@@ -3946,6 +3946,9 @@ static void soc_dapm_dai_stream_event(struct snd_soc_dai *dai, int stream,
 	struct snd_soc_dapm_widget *w;
 	unsigned int ep;
 
+	if (snd_soc_dai_is_dummy(dai))
+		return;
+
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		w = dai->playback_widget;
 	else

@@ -90,7 +90,3 @@
 		};
 	};
 };
-
-&video_phy {
-	status = "okay";
-};
